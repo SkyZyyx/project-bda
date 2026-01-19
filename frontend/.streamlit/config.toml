@@ -1,0 +1,26 @@
+# ==============================================================================
+# STREAMLIT CONFIGURATION
+# ==============================================================================
+# This file configures the appearance and behavior of the Streamlit app
+# ==============================================================================
+
+[theme]
+# Modern dark theme with vibrant accents
+primaryColor = "#6366f1"          # Indigo accent color
+backgroundColor = "#0f0f23"       # Deep dark background
+secondaryBackgroundColor = "#1a1a2e"  # Slightly lighter for cards
+textColor = "#e5e5e5"             # Light gray text
+font = "sans serif"
+
+[server]
+headless = true
+port = 8501
+enableCORS = true
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"

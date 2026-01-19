@@ -1,0 +1,51 @@
+# ==============================================================================
+# EXAM SCHEDULING PLATFORM - BACKEND REQUIREMENTS
+# ==============================================================================
+# This file lists all Python dependencies for the FastAPI backend.
+# Install with: pip install -r requirements.txt
+# ==============================================================================
+
+# Web Framework
+# FastAPI is a modern, high-performance web framework for building APIs
+# It's based on standard Python type hints and generates automatic documentation
+fastapi==0.115.0
+
+# ASGI Server
+# Uvicorn is a lightning-fast ASGI server for running our FastAPI application
+uvicorn[standard]==0.32.0
+
+# Database
+# We use asyncpg for async PostgreSQL connections (much faster than psycopg2)
+# SQLAlchemy provides our ORM (Object-Relational Mapping)
+asyncpg==0.30.0
+sqlalchemy[asyncio]==2.0.36
+
+# Data Validation
+# Pydantic v2 handles data validation and serialization
+# pydantic-settings manages configuration from environment variables
+pydantic==2.10.0
+pydantic-settings==2.6.0
+
+# Authentication
+# python-jose handles JWT token creation and verification
+# passlib with bcrypt for secure password hashing
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# CORS and Security
+# python-multipart for handling form data (needed for OAuth2 password flow)
+python-multipart==0.0.17
+
+# Utilities
+# python-dotenv loads environment variables from .env files
+python-dotenv==1.0.1
+
+# Date/Time handling
+# python-dateutil for advanced date parsing and manipulation
+python-dateutil==2.9.0
+
+# Development Tools (optional but recommended)
+# httpx for testing API endpoints
+httpx==0.28.0
+email-validator>=2.1.0
+aiosqlite
