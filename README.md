@@ -91,8 +91,8 @@ cd frontend && streamlit run app.py
 
 ### Accès à l'Application
 
-- **Interface Web** : http://localhost:8501
-- **Documentation API** : http://localhost:8000/api/v1/docs
+- **Interface Web** : (https://project-bda-v3c3zb5nqtxljq6zpyx4ff.streamlit.app/)
+- **Documentation API** : (https://exam-scheduling-backend.onrender.com)
 
 ### Comptes Utilisateurs
 
