@@ -8,6 +8,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import List
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -25,6 +26,17 @@ class Settings(BaseSettings):
     # Format: postgresql+asyncpg://user:password@host:port/database
     # The +asyncpg part tells SQLAlchemy to use the async driver
     database_url: str
+    
+    @field_validator("database_url")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        """
+        Fixes the connection string provided by Render/Neon.
+        SQLAlchemy+asyncpg requires 'postgresql+asyncpg://' but Render provides 'postgres://'.
+        """
+        if v and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
     
     # JWT Authentication settings
     # SECRET_KEY should be a long random string (use: openssl rand -hex 32)
