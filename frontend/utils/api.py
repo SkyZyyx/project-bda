@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any
 if hasattr(st, "secrets") and "API_URL" in st.secrets:
     API_URL = st.secrets["API_URL"]
 else:
-    API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1")
+    API_URL = os.getenv("API_URL", "https://exam-scheduling-backend.onrender.com/api/v1")
 
 
 class APIClient:
