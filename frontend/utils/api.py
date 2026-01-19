@@ -11,7 +11,11 @@ from functools import wraps
 from typing import Optional, Dict, Any
 
 # Load API URL from environment or use default
-API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1")
+# Try to get from Streamlit secrets first (for Cloud deployment), then env vars
+if hasattr(st, "secrets") and "API_URL" in st.secrets:
+    API_URL = st.secrets["API_URL"]
+else:
+    API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1")
 
 
 class APIClient:
