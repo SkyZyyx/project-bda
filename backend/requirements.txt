@@ -30,7 +30,8 @@ pydantic-settings==2.6.0
 # python-jose handles JWT token creation and verification
 # passlib with bcrypt for secure password hashing
 python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
+bcrypt==3.2.2
 
 # CORS and Security
 # python-multipart for handling form data (needed for OAuth2 password flow)
