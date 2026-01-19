@@ -496,6 +496,70 @@ async def populate_realistic_data(target_students: int = 13000):
             print("   ✓ Admin créé (admin@univ-alger.dz / admin123)")
         
         # ---------------------------------------------------------------------
+        # 10. UTILISATEURS DE DÉMO (Pour la soutenance)
+        # ---------------------------------------------------------------------
+        print("\n👥 Création des utilisateurs de démo pour la soutenance...")
+        
+        # 1. Chef de Département Informatique
+        dept_info = next((d for d in departments if d.code == "INFO"), None)
+        if dept_info:
+            dept_head_email = "head_info@univ-alger.dz"
+            if not (await db.execute(select(User).filter_by(email=dept_head_email))).scalar():
+                head_user = User(
+                    email=dept_head_email,
+                    password_hash=get_password_hash("head123"),
+                    role="dept_head",
+                    department_id=dept_info.id,
+                    is_active=True
+                )
+                db.add(head_user)
+                print("   ✓ Chef de Dept créé (head_info@univ-alger.dz / head123)")
+
+        # 2. Professeur Informatique
+        # On prend le premier prof du dept info
+        if departments:
+            dept_info = next((d for d in departments if d.code == "INFO"), None)
+            if dept_info:
+                # Chercher un prof de ce département
+                prof = (await db.execute(select(Professor).filter_by(department_id=dept_info.id).limit(1))).scalar_one_or_none()
+                if prof:
+                    prof_email = "prof_info@univ-alger.dz" # On utilise un email générique pour la démo, ou celui du prof
+                    # Pour la démo, on crée un user avec cet email spécifique lié à ce prof
+                    if not (await db.execute(select(User).filter_by(email=prof_email))).scalar():
+                        prof_user = User(
+                            email=prof_email,
+                            password_hash=get_password_hash("prof123"),
+                            role="professor",
+                            professor_id=prof.id,
+                            department_id=dept_info.id,
+                            is_active=True
+                        )
+                        db.add(prof_user)
+                        print("   ✓ Professeur créé (prof_info@univ-alger.dz / prof123)")
+
+        # 3. Étudiant Informatique
+        if formations:
+            # Chercher une formation info
+            fmt_info = next((f for f in formations if "INFO" in f.code or "Informatique" in f.name), None)
+            if fmt_info:
+                student = (await db.execute(select(Student).filter_by(formation_id=fmt_info.id).limit(1))).scalar_one_or_none()
+                if student:
+                    student_email = "etu_info@univ-alger.dz"
+                    if not (await db.execute(select(User).filter_by(email=student_email))).scalar():
+                        student_user = User(
+                            email=student_email,
+                            password_hash=get_password_hash("etu123"),
+                            role="student",
+                            student_id=student.id,
+                            department_id=fmt_info.department_id,
+                            is_active=True
+                        )
+                        db.add(student_user)
+                        print("   ✓ Étudiant créé (etu_info@univ-alger.dz / etu123)")
+        
+        await db.commit()
+        
+        # ---------------------------------------------------------------------
         # RÉSUMÉ FINAL
         # ---------------------------------------------------------------------
         print("\n" + "=" * 60)
