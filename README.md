@@ -93,6 +93,7 @@ cd frontend && streamlit run app.py
 
 - **Interface Web** : (https://project-bda-v3c3zb5nqtxljq6zpyx4ff.streamlit.app/)
 - **Documentation API** : (https://exam-scheduling-backend.onrender.com)
+- **The platform is deployed on free tier cloud services (Render + Streamlit Cloud). When the backend is inactive for 15 minutes, it goes to sleep to conserve resources. The first visitor experiences a 30-60 second initialization while the backend wakes up, but subsequent requests are served quickly.**
 
 ### Comptes Utilisateurs
 
