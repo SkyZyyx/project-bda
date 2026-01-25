@@ -15,7 +15,7 @@ import time
 from utils.storage import (
     save_auth_session,
     clear_all_auth_storage,
-    restore_session_from_storage,
+    restore_session_from_query_params,
     decode_token_exp,
     is_token_expired,
 )
@@ -128,7 +128,7 @@ api = APIClient()
 
 def login(email: str, password: str) -> Dict[str, Any]:
     """
-    Login user and store token in session state AND localStorage.
+    Login user and store token in session state AND query params.
     """
     # OAuth2PasswordRequestForm expects 'username' and 'password' as form data
     response = api.post(
@@ -146,10 +146,8 @@ def login(email: str, password: str) -> Dict[str, Any]:
                 st.session_state.user = user_response
                 st.session_state.is_authenticated = True
 
-                # PERSIST TO LOCALSTORAGE for session persistence across refreshes
-                # Extract token expiration
-                token_exp = decode_token_exp(token)
-                save_auth_session(token, user_response, token_exp)
+                # PERSIST TO QUERY PARAMS + LOCALSTORAGE for session persistence
+                save_auth_session(token, user_response)
             else:
                 return {
                     "error": True,
@@ -196,10 +194,10 @@ def require_auth(func):
 
 def restore_session() -> bool:
     """
-    Restore authentication session from localStorage if available.
+    Restore authentication session from query parameters.
 
     This function should be called on app startup to check if the user
-    has a valid session stored in their browser.
+    has a valid session stored in query params.
 
     Returns:
         True if session was restored, False otherwise
@@ -208,22 +206,15 @@ def restore_session() -> bool:
     if is_authenticated():
         return True
 
-    # Try to restore from localStorage
-    session_data = restore_session_from_storage()
+    # Try to restore from query params
+    session_data = restore_session_from_query_params()
 
     if session_data:
         token = session_data.get("token")
         user_data = session_data.get("user")
-        token_exp = session_data.get("exp")
 
-        # Check if token is expired
+        # Token is valid - restore session state
         if token and user_data:
-            if token_exp and is_token_expired(token_exp):
-                # Token expired - clear storage
-                clear_all_auth_storage()
-                return False
-
-            # Token is valid - restore session state
             st.session_state.auth_token = token
             st.session_state.user = user_data
             st.session_state.is_authenticated = True
