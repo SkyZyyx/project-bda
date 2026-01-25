@@ -68,7 +68,6 @@ with st.sidebar:
             <h1 style="font-size: 1.5rem; font-weight: 800; margin: 0; color: white; letter-spacing: -0.03em;">
                 ExamOpti
             </h1>
-
         </div>
         <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 4px 0 0 48px; font-weight: 500;">
             Strategic Scheduling
