@@ -11,6 +11,15 @@ from functools import wraps
 from typing import Optional, Dict, Any
 import time
 
+# Import storage utilities for session persistence
+from utils.storage import (
+    save_auth_session,
+    clear_all_auth_storage,
+    restore_session_from_storage,
+    decode_token_exp,
+    is_token_expired,
+)
+
 # Load API URL from environment or use default
 # Try to get from Streamlit secrets first (for Cloud deployment), then env vars
 if hasattr(st, "secrets") and "API_URL" in st.secrets:
@@ -119,7 +128,7 @@ api = APIClient()
 
 def login(email: str, password: str) -> Dict[str, Any]:
     """
-    Login user and store token in session state.
+    Login user and store token in session state AND localStorage.
     """
     # OAuth2PasswordRequestForm expects 'username' and 'password' as form data
     response = api.post(
@@ -127,28 +136,39 @@ def login(email: str, password: str) -> Dict[str, Any]:
     )
 
     if not response.get("error"):
-        st.session_state.auth_token = response.get("access_token")
-        # Since login doesn't return user info, we fetch it immediately
-        user_response = api.get("/auth/me")
-        if not user_response.get("error"):
-            st.session_state.user = user_response
-            st.session_state.is_authenticated = True
-        else:
-            return {
-                "error": True,
-                "detail": "Login successful but failed to fetch user info",
-            }
+        token = response.get("access_token")
+        if token:
+            st.session_state.auth_token = token
+
+            # Since login doesn't return user info, we fetch it immediately
+            user_response = api.get("/auth/me")
+            if not user_response.get("error"):
+                st.session_state.user = user_response
+                st.session_state.is_authenticated = True
+
+                # PERSIST TO LOCALSTORAGE for session persistence across refreshes
+                # Extract token expiration
+                token_exp = decode_token_exp(token)
+                save_auth_session(token, user_response, token_exp)
+            else:
+                return {
+                    "error": True,
+                    "detail": "Login successful but failed to fetch user info",
+                }
 
     return response
 
 
 def logout():
-    """Clear authentication state."""
+    """Clear authentication state from session AND localStorage."""
     if "auth_token" in st.session_state:
         del st.session_state.auth_token
     if "user" in st.session_state:
         del st.session_state.user
     st.session_state.is_authenticated = False
+
+    # Clear from localStorage
+    clear_all_auth_storage()
 
 
 def is_authenticated() -> bool:
@@ -172,6 +192,45 @@ def require_auth(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def restore_session() -> bool:
+    """
+    Restore authentication session from localStorage if available.
+
+    This function should be called on app startup to check if the user
+    has a valid session stored in their browser.
+
+    Returns:
+        True if session was restored, False otherwise
+    """
+    # Check if already authenticated in current Streamlit session
+    if is_authenticated():
+        return True
+
+    # Try to restore from localStorage
+    session_data = restore_session_from_storage()
+
+    if session_data:
+        token = session_data.get("token")
+        user_data = session_data.get("user")
+        token_exp = session_data.get("exp")
+
+        # Check if token is expired
+        if token and user_data:
+            if token_exp and is_token_expired(token_exp):
+                # Token expired - clear storage
+                clear_all_auth_storage()
+                return False
+
+            # Token is valid - restore session state
+            st.session_state.auth_token = token
+            st.session_state.user = user_data
+            st.session_state.is_authenticated = True
+
+            return True
+
+    return False
 
 
 # ==============================================================================

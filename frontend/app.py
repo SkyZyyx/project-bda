@@ -7,7 +7,14 @@
 
 import streamlit as st
 from streamlit_option_menu import option_menu
-from utils.api import api, get_current_user, is_authenticated, logout, wake_backend
+from utils.api import (
+    api,
+    get_current_user,
+    is_authenticated,
+    logout,
+    wake_backend,
+    restore_session,
+)
 
 # Import custom utilities
 from utils.styles import conflict_indicator, inject_custom_css, metric_card, page_header
@@ -49,6 +56,19 @@ if not st.session_state.backend_ready:
         st.session_state.backend_ready = True
         st.rerun()  # Reload to show the main app
     # If wake_backend returns False, it will show an error and stop execution
+
+# ==============================================================================
+# SESSION RESTORATION FROM LOCALSTORAGE
+# ==============================================================================
+# After backend is ready, try to restore user session from browser localStorage
+# This keeps users logged in across page refreshes and browser restarts
+if "session_restore_attempted" not in st.session_state:
+    st.session_state.session_restore_attempted = False
+
+if not st.session_state.session_restore_attempted:
+    # Try to restore session from localStorage
+    restore_session()
+    st.session_state.session_restore_attempted = True
 
 # ==============================================================================
 # SIDEBAR NAVIGATION
