@@ -660,12 +660,13 @@ elif selected == "Scheduling":
                     start_time = time.time()
 
                     st.write(
-                        f"🔍 DEBUG: Calling API endpoint /scheduling/clear-session/{selected_id}"
+                        f"🔍 DEBUG: Calling API endpoint /scheduling/debug-reset with params"
                     )
 
-                    # NOTE: Using GET instead of POST due to POST timeout issues
+                    # NOTE: Using new debug endpoint with query params
                     res = api.get(
-                        f"/scheduling/clear-session/{selected_id}",
+                        "/scheduling/debug-reset",
+                        params={"session_id": selected_id},
                         timeout=60,  # Clear session can take longer with many exams
                     )
 
