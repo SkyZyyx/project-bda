@@ -596,23 +596,35 @@ elif selected == "Scheduling":
                 if st.button(
                     "Launch Auto-Schedule", type="primary", use_container_width=True
                 ):
-                    with st.spinner("Running Optimization Engine..."):
-                        res = api.post(f"/scheduling/schedule-session/{selected_id}")
-                        if res.get("error"):
-                            st.error(res.get("detail"))
-                        else:
-                            # Extract timing and results from response
-                            exec_time_s = res.get("execution_time_ms", 0) / 1000
-                            scheduled = res.get("scheduled_count", 0)
-                            failed = res.get("failed_count", 0)
+                    # Check if already scheduled before running
+                    if pending_exams == 0 and total_exams > 0:
+                        st.info(
+                            f"ℹ️ All {total_exams} exams are already scheduled! Use 'Clear All Current Schedules' to reset and reschedule."
+                        )
+                    elif total_exams == 0:
+                        st.warning(
+                            "⚠️ No exams found in this session. Please run 'Initialize Exams' first."
+                        )
+                    else:
+                        with st.spinner("Running Optimization Engine..."):
+                            res = api.post(
+                                f"/scheduling/schedule-session/{selected_id}"
+                            )
+                            if res.get("error"):
+                                st.error(res.get("detail"))
+                            else:
+                                # Extract timing and results from response
+                                exec_time_s = res.get("execution_time_ms", 0) / 1000
+                                scheduled = res.get("scheduled_count", 0)
+                                failed = res.get("failed_count", 0)
 
-                            # Display success message with timing
-                            success_msg = f"Auto-scheduling done in {exec_time_s:.2f} seconds! {scheduled} exams scheduled."
-                            if failed > 0:
-                                success_msg += f" ({failed} failed)"
+                                # Display success message with timing
+                                success_msg = f"Auto-scheduling done in {exec_time_s:.2f} seconds! {scheduled} exams scheduled."
+                                if failed > 0:
+                                    success_msg += f" ({failed} failed)"
 
-                            st.success(success_msg)
-                            st.rerun()
+                                st.success(success_msg)
+                                st.rerun()
 
             with c3:
                 st.markdown("**Phase 3: Staffing**")
