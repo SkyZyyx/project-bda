@@ -646,29 +646,48 @@ elif selected == "Scheduling":
                             st.rerun()
 
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button(
-                "🗑️ Clear All Current Schedules",
-                key="clear_sess",
-                help="Reset all mappings for this session",
-            ):
-                with st.spinner("Clearing schedules..."):
-                    res = api.get(
-                        "/scheduling/debug-reset",
-                        params={"session_id": selected_id},
-                        timeout=60,  # Clear session can take longer with many exams
-                    )
-
-                    if res.get("error"):
-                        st.error(f"❌ Failed to clear schedules: {res.get('detail')}")
-                    else:
-                        exams_cleared = res.get("exams_cleared", 0)
-                        supervisors_deleted = res.get("supervisors_deleted", 0)
-                        st.success(
-                            f"✅ Schedule cleared! Reset {exams_cleared} exams and removed {supervisors_deleted} supervisor assignments."
-                        )
-                        # Clear cached data and refresh
-                        fetch_dashboard_overview.clear()
-                        st.rerun()
+            
+            # Two-step clear process for safety
+            clear_col1, clear_col2 = st.columns([3, 1])
+            with clear_col1:
+                if st.button(
+                    "🗑️ Clear All Current Schedules",
+                    key="clear_sess",
+                    help="Reset all mappings for this session",
+                    type="secondary",
+                ):
+                    st.session_state["confirm_clear"] = True
+            
+            # Confirmation step
+            if st.session_state.get("confirm_clear"):
+                with clear_col2:
+                    if st.button("✅ Confirm", key="confirm_clear_btn", type="primary"):
+                        try:
+                            res = api.get(
+                                "/scheduling/debug-reset",
+                                params={"session_id": str(selected_id)},
+                                timeout=120,  # Allow up to 2 minutes
+                            )
+                            
+                            if res.get("error"):
+                                st.error(f"❌ Failed to clear schedules: {res.get('detail', 'Unknown error')}")
+                            else:
+                                exams_cleared = res.get("exams_cleared", 0)
+                                supervisors_deleted = res.get("supervisors_deleted", 0)
+                                st.toast(
+                                    f"✅ Cleared {exams_cleared} exams and {supervisors_deleted} supervisors!",
+                                    icon="✅"
+                                )
+                                st.success(
+                                    f"✅ Schedule cleared! Reset {exams_cleared} exams and removed {supervisors_deleted} supervisor assignments."
+                                )
+                                # Clear cached data
+                                fetch_dashboard_overview.clear()
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
+                        finally:
+                            st.session_state["confirm_clear"] = False
+                            st.rerun()
 
         with tab2:
             st.markdown(
