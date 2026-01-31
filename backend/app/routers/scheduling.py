@@ -436,15 +436,16 @@ async def prepare_session_for_scheduling(
     }
 
 
-@router.post("/clear-session/{session_id}")
+@router.get("/clear-session/{session_id}")
 async def clear_session_schedule(
     session_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role(["admin"])),
 ):
     """
-    Python implementation of clear session - OPTIMIZED VERSION.
+    Clear session schedule - OPTIMIZED VERSION.
     Uses bulk UPDATE instead of looping through exams one by one.
+    NOTE: Changed from POST to GET due to network timeout issues with POST requests.
     """
     from sqlalchemy import update, delete
     from app.models import ExamSupervisor

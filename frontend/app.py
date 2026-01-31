@@ -663,7 +663,8 @@ elif selected == "Scheduling":
                         f"🔍 DEBUG: Calling API endpoint /scheduling/clear-session/{selected_id}"
                     )
 
-                    res = api.post(
+                    # NOTE: Using GET instead of POST due to POST timeout issues
+                    res = api.get(
                         f"/scheduling/clear-session/{selected_id}",
                         timeout=60,  # Clear session can take longer with many exams
                     )
