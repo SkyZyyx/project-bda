@@ -583,7 +583,10 @@ elif selected == "Scheduling":
                 st.caption("Generate registry from curricula")
                 if st.button("Initialize Exams", use_container_width=True):
                     with st.spinner("Processing modules..."):
-                        res = api.post(f"/scheduling/prepare-session/{selected_id}")
+                        res = api.post(
+                            f"/scheduling/prepare-session/{selected_id}",
+                            timeout=60,  # Can take time with many modules
+                        )
                         if res.get("error"):
                             st.error(res.get("detail"))
                         else:
@@ -648,15 +651,33 @@ elif selected == "Scheduling":
                 key="clear_sess",
                 help="Reset all mappings for this session",
             ):
+                # Debug logging
+                st.write(f"🔍 DEBUG: Button clicked! Session ID: {selected_id}")
+
                 with st.spinner("Clearing schedules..."):
+                    import time
+
+                    start_time = time.time()
+
+                    st.write(
+                        f"🔍 DEBUG: Calling API endpoint /scheduling/clear-session/{selected_id}"
+                    )
+
                     res = api.post(
                         f"/scheduling/clear-session/{selected_id}",
                         timeout=60,  # Clear session can take longer with many exams
                     )
+
+                    elapsed = time.time() - start_time
+                    st.write(f"🔍 DEBUG: API call completed in {elapsed:.2f}s")
+                    st.write(f"🔍 DEBUG: Response: {res}")
+
                     if res.get("error"):
+                        st.write(f"🔍 DEBUG: Error detected!")
                         st.error(res.get("detail"))
                     else:
                         cleared_count = res.get("exams_cleared", 0)
+                        st.write(f"🔍 DEBUG: Success! {cleared_count} exams cleared")
                         st.success(f"✅ Session reset! {cleared_count} exams cleared.")
                         st.rerun()
 
