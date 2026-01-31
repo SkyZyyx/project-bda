@@ -461,8 +461,15 @@ elif selected == "Scheduling":
     )
 
     # 1. Fetch data for metrics
+    @st.cache_data(ttl=10, show_spinner=False)
+    def fetch_dashboard_overview(_api_base_url: str, _auth_token: str):
+        """Cached dashboard overview - refreshes every 10 seconds"""
+        return api.get("/dashboard/overview", timeout=15)
+
     with st.spinner("Analyzing session state..."):
-        overview = api.get("/dashboard/overview")
+        overview = fetch_dashboard_overview(
+            api.base_url, st.session_state.get("auth_token", "")
+        )
         active_sessions = (
             overview.get("active_sessions", []) if not overview.get("error") else []
         )
@@ -625,10 +632,14 @@ elif selected == "Scheduling":
                 key="clear_sess",
                 help="Reset all mappings for this session",
             ):
-                res = api.post(f"/scheduling/clear-session/{selected_id}")
-                if not res.get("error"):
-                    st.success("Session reset.")
-                    st.rerun()
+                with st.spinner("Clearing schedules..."):
+                    res = api.post(f"/scheduling/clear-session/{selected_id}")
+                    if res.get("error"):
+                        st.error(res.get("detail"))
+                    else:
+                        cleared_count = res.get("exams_cleared", 0)
+                        st.success(f"✅ Session reset! {cleared_count} exams cleared.")
+                        st.rerun()
 
         with tab2:
             st.markdown(

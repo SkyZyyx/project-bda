@@ -71,17 +71,30 @@ class APIClient:
         except requests.exceptions.RequestException as req_err:
             return {"error": True, "detail": f"Connection error: {str(req_err)}"}
 
-    def get(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+    def get(
+        self, endpoint: str, params: Optional[Dict] = None, timeout: int = 30
+    ) -> Dict[str, Any]:
         """Make a GET request to the API."""
         url = f"{self.base_url}{endpoint}"
         try:
-            response = self.session.get(url, headers=self._get_headers(), params=params)
+            response = self.session.get(
+                url, headers=self._get_headers(), params=params, timeout=timeout
+            )
             return self._handle_response(response)
+        except requests.exceptions.Timeout:
+            return {
+                "error": True,
+                "detail": f"Request timed out after {timeout} seconds. Please try again.",
+            }
         except Exception as e:
             return {"error": True, "detail": str(e)}
 
     def post(
-        self, endpoint: str, data: Optional[Dict] = None, is_form: bool = False
+        self,
+        endpoint: str,
+        data: Optional[Dict] = None,
+        is_form: bool = False,
+        timeout: int = 30,
     ) -> Dict[str, Any]:
         """Make a POST request to the API."""
         url = f"{self.base_url}{endpoint}"
@@ -90,29 +103,54 @@ class APIClient:
             if is_form:
                 # Remove Content-Type so requests can set it to application/x-www-form-urlencoded
                 headers.pop("Content-Type", None)
-                response = self.session.post(url, headers=headers, data=data)
+                response = self.session.post(
+                    url, headers=headers, data=data, timeout=timeout
+                )
             else:
-                response = self.session.post(url, headers=headers, json=data)
+                response = self.session.post(
+                    url, headers=headers, json=data, timeout=timeout
+                )
 
             return self._handle_response(response)
+        except requests.exceptions.Timeout:
+            return {
+                "error": True,
+                "detail": f"Request timed out after {timeout} seconds. Please try again.",
+            }
         except Exception as e:
             return {"error": True, "detail": str(e)}
 
-    def put(self, endpoint: str, data: Optional[Dict] = None) -> Dict[str, Any]:
+    def put(
+        self, endpoint: str, data: Optional[Dict] = None, timeout: int = 30
+    ) -> Dict[str, Any]:
         """Make a PUT request to the API."""
         url = f"{self.base_url}{endpoint}"
         try:
-            response = self.session.put(url, headers=self._get_headers(), json=data)
+            response = self.session.put(
+                url, headers=self._get_headers(), json=data, timeout=timeout
+            )
             return self._handle_response(response)
+        except requests.exceptions.Timeout:
+            return {
+                "error": True,
+                "detail": f"Request timed out after {timeout} seconds. Please try again.",
+            }
         except Exception as e:
             return {"error": True, "detail": str(e)}
 
-    def delete(self, endpoint: str) -> Dict[str, Any]:
+    def delete(self, endpoint: str, timeout: int = 30) -> Dict[str, Any]:
         """Make a DELETE request to the API."""
         url = f"{self.base_url}{endpoint}"
         try:
-            response = self.session.delete(url, headers=self._get_headers())
+            response = self.session.delete(
+                url, headers=self._get_headers(), timeout=timeout
+            )
             return self._handle_response(response)
+        except requests.exceptions.Timeout:
+            return {
+                "error": True,
+                "detail": f"Request timed out after {timeout} seconds. Please try again.",
+            }
         except Exception as e:
             return {"error": True, "detail": str(e)}
 
