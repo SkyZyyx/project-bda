@@ -474,6 +474,33 @@ elif selected == "Scheduling":
             overview.get("active_sessions", []) if not overview.get("error") else []
         )
 
+    # Display auto-schedule result if stored in session state (persists across rerun)
+    if st.session_state.get("auto_schedule_result"):
+        result = st.session_state.pop("auto_schedule_result")
+        exec_time_s = result["exec_time_s"]
+        scheduled = result["scheduled"]
+        failed = result["failed"]
+        target_met = result["target_met"]
+        
+        # Show balloons if target was met
+        if target_met:
+            st.balloons()
+        
+        # Create the success container
+        goal_text = "✅ GOAL MET! (< 45s)" if target_met else "⚠️ Above 45s target"
+        time_icon = "🎯" if target_met else "⏱️"
+        
+        st.success(f"""
+        ### {time_icon} Auto-Scheduling Complete!
+        
+        **⏱️ Execution Time: `{exec_time_s:.2f} seconds`** {goal_text}
+        
+        - 📋 **{scheduled}** exams scheduled successfully
+        - ❌ **{failed}** exams failed
+        """)
+        
+        st.toast(f"⏱️ Scheduled {scheduled} exams in {exec_time_s:.2f}s", icon=time_icon)
+
     if not active_sessions:
         st.warning(
             "⚠️ No active exam sessions found. Please initialize a session in the database first."
@@ -626,34 +653,15 @@ elif selected == "Scheduling":
                                 # Determine if target was met (< 45 seconds)
                                 target_met = exec_time_s < 45
                                 
-                                # Create prominent timing display
-                                if target_met:
-                                    time_icon = "🎯"
-                                    time_color = "green"
-                                    goal_text = "✅ GOAL MET! (< 45s)"
-                                    st.balloons()  # Celebrate!
-                                else:
-                                    time_icon = "⏱️"
-                                    time_color = "orange"
-                                    goal_text = "⚠️ Above 45s target"
+                                # Store result in session state so it persists after rerun
+                                st.session_state["auto_schedule_result"] = {
+                                    "exec_time_s": exec_time_s,
+                                    "scheduled": scheduled,
+                                    "failed": failed,
+                                    "target_met": target_met,
+                                }
                                 
-                                # Display prominent success message with timing
-                                st.success(f"""
-                                ### {time_icon} Auto-Scheduling Complete!
-                                
-                                **⏱️ Execution Time: `{exec_time_s:.2f} seconds`** {goal_text}
-                                
-                                - 📋 **{scheduled}** exams scheduled successfully
-                                - ❌ **{failed}** exams failed (if any)
-                                """)
-                                
-                                # Also show toast for quick reference
-                                st.toast(
-                                    f"⏱️ Scheduled {scheduled} exams in {exec_time_s:.2f}s",
-                                    icon="🎯" if target_met else "⏱️"
-                                )
-                                
-                                # Clear cache and refresh after a moment
+                                # Clear cache and refresh - message will display after rerun
                                 fetch_dashboard_overview.clear()
                                 st.rerun()
 
