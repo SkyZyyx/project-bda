@@ -612,22 +612,49 @@ elif selected == "Scheduling":
                         with st.spinner("Running Optimization Engine..."):
                             res = api.post(
                                 f"/scheduling/schedule-session/{selected_id}",
-                                timeout=60,  # Auto-schedule takes ~32s, use 60s timeout
+                                timeout=120,  # Allow up to 2 minutes for large datasets
                             )
                             if res.get("error"):
-                                st.error(res.get("detail"))
+                                st.error(f"❌ Scheduling failed: {res.get('detail')}")
                             else:
                                 # Extract timing and results from response
-                                exec_time_s = res.get("execution_time_ms", 0) / 1000
+                                exec_time_ms = res.get("execution_time_ms", 0)
+                                exec_time_s = exec_time_ms / 1000
                                 scheduled = res.get("scheduled_count", 0)
                                 failed = res.get("failed_count", 0)
-
-                                # Display success message with timing
-                                success_msg = f"Auto-scheduling done in {exec_time_s:.2f} seconds! {scheduled} exams scheduled."
-                                if failed > 0:
-                                    success_msg += f" ({failed} failed)"
-
-                                st.success(success_msg)
+                                
+                                # Determine if target was met (< 45 seconds)
+                                target_met = exec_time_s < 45
+                                
+                                # Create prominent timing display
+                                if target_met:
+                                    time_icon = "🎯"
+                                    time_color = "green"
+                                    goal_text = "✅ GOAL MET! (< 45s)"
+                                    st.balloons()  # Celebrate!
+                                else:
+                                    time_icon = "⏱️"
+                                    time_color = "orange"
+                                    goal_text = "⚠️ Above 45s target"
+                                
+                                # Display prominent success message with timing
+                                st.success(f"""
+                                ### {time_icon} Auto-Scheduling Complete!
+                                
+                                **⏱️ Execution Time: `{exec_time_s:.2f} seconds`** {goal_text}
+                                
+                                - 📋 **{scheduled}** exams scheduled successfully
+                                - ❌ **{failed}** exams failed (if any)
+                                """)
+                                
+                                # Also show toast for quick reference
+                                st.toast(
+                                    f"⏱️ Scheduled {scheduled} exams in {exec_time_s:.2f}s",
+                                    icon="🎯" if target_met else "⏱️"
+                                )
+                                
+                                # Clear cache and refresh after a moment
+                                fetch_dashboard_overview.clear()
                                 st.rerun()
 
             with c3:
