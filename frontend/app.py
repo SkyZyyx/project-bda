@@ -649,7 +649,10 @@ elif selected == "Scheduling":
                 help="Reset all mappings for this session",
             ):
                 with st.spinner("Clearing schedules..."):
-                    res = api.post(f"/scheduling/clear-session/{selected_id}")
+                    res = api.post(
+                        f"/scheduling/clear-session/{selected_id}",
+                        timeout=60,  # Clear session can take longer with many exams
+                    )
                     if res.get("error"):
                         st.error(res.get("detail"))
                     else:
