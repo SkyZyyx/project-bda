@@ -608,7 +608,8 @@ elif selected == "Scheduling":
                     else:
                         with st.spinner("Running Optimization Engine..."):
                             res = api.post(
-                                f"/scheduling/schedule-session/{selected_id}"
+                                f"/scheduling/schedule-session/{selected_id}",
+                                timeout=60,  # Auto-schedule takes ~32s, use 60s timeout
                             )
                             if res.get("error"):
                                 st.error(res.get("detail"))
@@ -631,7 +632,10 @@ elif selected == "Scheduling":
                 st.caption("Invigilator load balancing")
                 if st.button("Assign Supervisors", use_container_width=True):
                     with st.spinner("Optimizing staff assignments..."):
-                        res = api.post(f"/scheduling/assign-supervisors/{selected_id}")
+                        res = api.post(
+                            f"/scheduling/assign-supervisors/{selected_id}",
+                            timeout=60,  # Assign supervisors takes ~17s, use 60s timeout
+                        )
                         if res.get("error"):
                             st.error(res.get("detail"))
                         else:
