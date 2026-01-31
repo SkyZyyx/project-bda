@@ -594,7 +594,17 @@ elif selected == "Scheduling":
                         if res.get("error"):
                             st.error(res.get("detail"))
                         else:
-                            st.success("✅ Schedule Generated")
+                            # Extract timing and results from response
+                            exec_time_s = res.get("execution_time_ms", 0) / 1000
+                            scheduled = res.get("scheduled_count", 0)
+                            failed = res.get("failed_count", 0)
+
+                            # Display success message with timing
+                            success_msg = f"Auto-scheduling done in {exec_time_s:.2f} seconds! {scheduled} exams scheduled."
+                            if failed > 0:
+                                success_msg += f" ({failed} failed)"
+
+                            st.success(success_msg)
                             st.rerun()
 
             with c3:
