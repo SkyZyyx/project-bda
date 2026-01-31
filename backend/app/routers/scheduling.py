@@ -535,22 +535,67 @@ async def _reset_session_background(session_id: UUID):
 @router.get("/debug-reset")
 async def debug_reset_session(
     session_id: UUID,
-    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role(["admin"])),
 ):
     """
-    DEBUG endpoint to reset session via Query Parameter (Background Task).
+    Reset session endpoint - SYNCHRONOUS VERSION.
     Path: /api/v1/scheduling/debug-reset?session_id=...
+    
+    This directly performs the reset without background tasks so the result
+    can be verified immediately.
     """
-    print(f">>> DEBUG-RESET: Received request for {session_id}", flush=True)
+    from sqlalchemy import update, delete
+    from app.models import ExamSupervisor
+    import time
 
-    # Add background task
-    background_tasks.add_task(_reset_session_background, session_id)
+    start_time = time.time()
+    print(f">>> DEBUG-RESET: Starting synchronous reset for {session_id}", flush=True)
 
-    return {
-        "message": "Reset initiated in background. Please wait a few seconds.",
-        "status": "processing",
-    }
+    try:
+        # 1. Bulk update all scheduled exams to pending
+        result = await db.execute(
+            update(Exam)
+            .where(Exam.session_id == session_id, Exam.status == "scheduled")
+            .values(status="pending", scheduled_date=None, start_time=None, room_id=None)
+            .execution_options(synchronize_session=False)
+        )
+        exams_cleared = result.rowcount
+        print(f">>> DEBUG-RESET: Cleared {exams_cleared} exams", flush=True)
+
+        # 2. Get exam IDs for this session
+        exam_ids_result = await db.execute(
+            select(Exam.id).where(Exam.session_id == session_id)
+        )
+        exam_ids = [row[0] for row in exam_ids_result.all()]
+
+        # 3. Delete supervisors for these exams
+        supervisors_deleted = 0
+        if exam_ids:
+            sup_result = await db.execute(
+                delete(ExamSupervisor).where(ExamSupervisor.exam_id.in_(exam_ids))
+            )
+            supervisors_deleted = sup_result.rowcount
+            print(f">>> DEBUG-RESET: Deleted {supervisors_deleted} supervisor assignments", flush=True)
+
+        # 4. Commit the changes
+        await db.commit()
+
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        print(f">>> DEBUG-RESET: COMPLETED in {elapsed_ms}ms", flush=True)
+
+        return {
+            "message": f"Reset completed! Cleared {exams_cleared} exams and {supervisors_deleted} supervisor assignments.",
+            "status": "completed",
+            "exams_cleared": exams_cleared,
+            "supervisors_deleted": supervisors_deleted,
+            "execution_time_ms": elapsed_ms,
+        }
+
+    except Exception as e:
+        print(f">>> DEBUG-RESET: ERROR: {str(e)}", flush=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")
 
 
 @router.post("/assign-supervisors/{session_id}")

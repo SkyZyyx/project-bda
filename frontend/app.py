@@ -651,37 +651,23 @@ elif selected == "Scheduling":
                 key="clear_sess",
                 help="Reset all mappings for this session",
             ):
-                # Debug logging
-                st.write(f"🔍 DEBUG: Button clicked! Session ID: {selected_id}")
-
                 with st.spinner("Clearing schedules..."):
-                    import time
-
-                    start_time = time.time()
-
-                    st.write(
-                        f"🔍 DEBUG: Calling API endpoint /scheduling/debug-reset with params"
-                    )
-
-                    # NOTE: Using new debug endpoint with query params
                     res = api.get(
                         "/scheduling/debug-reset",
                         params={"session_id": selected_id},
                         timeout=60,  # Clear session can take longer with many exams
                     )
 
-                    elapsed = time.time() - start_time
-                    st.write(f"🔍 DEBUG: API call completed in {elapsed:.2f}s")
-                    st.write(f"🔍 DEBUG: Response: {res}")
-
                     if res.get("error"):
-                        st.write(f"🔍 DEBUG: Error detected!")
-                        st.error(res.get("detail"))
+                        st.error(f"❌ Failed to clear schedules: {res.get('detail')}")
                     else:
-                        st.write(f"🔍 DEBUG: Success! Response accepted.")
+                        exams_cleared = res.get("exams_cleared", 0)
+                        supervisors_deleted = res.get("supervisors_deleted", 0)
                         st.success(
-                            "✅ Reset initiated! The schedule is being cleared in the background. Please wait a few moments."
+                            f"✅ Schedule cleared! Reset {exams_cleared} exams and removed {supervisors_deleted} supervisor assignments."
                         )
+                        # Clear cached data and refresh
+                        fetch_dashboard_overview.clear()
                         st.rerun()
 
         with tab2:
