@@ -678,9 +678,10 @@ elif selected == "Scheduling":
                         st.write(f"🔍 DEBUG: Error detected!")
                         st.error(res.get("detail"))
                     else:
-                        cleared_count = res.get("exams_cleared", 0)
-                        st.write(f"🔍 DEBUG: Success! {cleared_count} exams cleared")
-                        st.success(f"✅ Session reset! {cleared_count} exams cleared.")
+                        st.write(f"🔍 DEBUG: Success! Response accepted.")
+                        st.success(
+                            "✅ Reset initiated! The schedule is being cleared in the background. Please wait a few moments."
+                        )
                         st.rerun()
 
         with tab2:

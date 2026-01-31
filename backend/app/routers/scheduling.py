@@ -8,11 +8,11 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 
-from app.core.database import get_db
+from app.core.database import get_db, async_session_maker
 from app.core.security import get_current_user, require_role
 from app.models import ExamSession, Exam, Module
 from app.schemas import (
@@ -484,62 +484,72 @@ async def clear_session_schedule(
     }
 
 
-@router.get("/debug-reset")
-async def debug_reset_session(
-    session_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role(["admin"])),
-):
-    """
-    DEBUG endpoint to reset session via Query Parameter.
-    Path: /api/v1/scheduling/debug-reset?session_id=...
-    Bypasses potential path parameter routing issues.
-    """
-    print(f">>> DEBUG-RESET: CALLED with session_id={session_id}", flush=True)
-
+async def _reset_session_background(session_id: UUID):
+    """Background task to reset session with its own DB session."""
     from sqlalchemy import update, delete
-    from app.models import ExamSupervisor
+    from app.models import ExamSupervisor, Exam
     import time
 
     start_time = time.time()
+    print(f">>> BG-RESET: Starting background reset for {session_id}", flush=True)
 
-    # 1. Bulk update exams
-    print(">>> DEBUG-RESET: Executing bulk UPDATE...", flush=True)
-    result = await db.execute(
-        update(Exam)
-        .where(Exam.session_id == session_id, Exam.status == "scheduled")
-        .values(status="pending", scheduled_date=None, start_time=None, room_id=None)
-        .execution_options(synchronize_session=False)
-    )
-    count = result.rowcount
-    print(f">>> DEBUG-RESET: Updated {count} exams", flush=True)
+    # Create NEW session for background task to avoid pool locking issues
+    async with async_session_maker() as db:
+        try:
+            # 1. Bulk update exams
+            result = await db.execute(
+                update(Exam)
+                .where(Exam.session_id == session_id, Exam.status == "scheduled")
+                .values(
+                    status="pending", scheduled_date=None, start_time=None, room_id=None
+                )
+                .execution_options(synchronize_session=False)
+            )
+            count = result.rowcount
+            print(f">>> BG-RESET: Updated {count} exams", flush=True)
 
-    # 2. Delete supervisors
-    print(">>> DEBUG-RESET: Finding exams for supervisor deletion...", flush=True)
-    exam_ids_result = await db.execute(
-        select(Exam.id).where(Exam.session_id == session_id)
-    )
-    exam_ids = [row[0] for row in exam_ids_result.all()]
+            # 2. Delete supervisors
+            exam_ids_result = await db.execute(
+                select(Exam.id).where(Exam.session_id == session_id)
+            )
+            exam_ids = [row[0] for row in exam_ids_result.all()]
 
-    if exam_ids:
-        print(
-            f">>> DEBUG-RESET: Deleting supervisors for {len(exam_ids)} exams...",
-            flush=True,
-        )
-        await db.execute(
-            delete(ExamSupervisor).where(ExamSupervisor.exam_id.in_(exam_ids))
-        )
+            if exam_ids:
+                print(
+                    f">>> BG-RESET: Deleting supervisors for {len(exam_ids)} exams...",
+                    flush=True,
+                )
+                await db.execute(
+                    delete(ExamSupervisor).where(ExamSupervisor.exam_id.in_(exam_ids))
+                )
 
-    print(">>> DEBUG-RESET: Committing transaction...", flush=True)
-    await db.commit()
+            await db.commit()
+            elapsed_ms = int((time.time() - start_time) * 1000)
+            print(f">>> BG-RESET: COMPLETED in {elapsed_ms}ms", flush=True)
 
-    elapsed_ms = int((time.time() - start_time) * 1000)
-    print(f">>> DEBUG-RESET: DONE in {elapsed_ms}ms", flush=True)
+        except Exception as e:
+            print(f">>> BG-RESET: ERROR: {str(e)}", flush=True)
+            await db.rollback()
+
+
+@router.get("/debug-reset")
+async def debug_reset_session(
+    session_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(require_role(["admin"])),
+):
+    """
+    DEBUG endpoint to reset session via Query Parameter (Background Task).
+    Path: /api/v1/scheduling/debug-reset?session_id=...
+    """
+    print(f">>> DEBUG-RESET: Received request for {session_id}", flush=True)
+
+    # Add background task
+    background_tasks.add_task(_reset_session_background, session_id)
 
     return {
-        "message": f"Debug reset complete: {count} exams cleared",
-        "exams_cleared": count,
-        "execution_time_ms": elapsed_ms,
+        "message": "Reset initiated in background. Please wait a few seconds.",
+        "status": "processing",
     }
 
 
